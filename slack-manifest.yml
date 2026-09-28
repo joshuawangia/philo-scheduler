@@ -1,0 +1,38 @@
+# Create the app at https://api.slack.com/apps -> Create New App -> From a manifest.
+# Replace https://philo-interviews.example.com with your BASE_URL.
+display_information:
+  name: Philo Interviews
+  description: Schedules Philomathean Society interviews from members' Google Calendars.
+  background_color: "#000000"
+features:
+  app_home:
+    home_tab_enabled: true
+    messages_tab_enabled: true
+    messages_tab_read_only_enabled: true
+  bot_user:
+    display_name: Philo Interviews
+    always_online: true
+  slash_commands:
+    - command: /philo
+      url: https://philo-interviews.example.com/slack/events
+      description: Interview scheduling (connect, list, settings…)
+      usage_hint: "connect | list | link | settings | open | close | censor @user"
+      should_escape: true
+oauth_config:
+  scopes:
+    bot:
+      - chat:write
+      - commands
+      - users:read
+      - im:write
+settings:
+  event_subscriptions:
+    request_url: https://philo-interviews.example.com/slack/events
+    bot_events:
+      - app_home_opened
+  interactivity:
+    is_enabled: true
+    request_url: https://philo-interviews.example.com/slack/events
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
