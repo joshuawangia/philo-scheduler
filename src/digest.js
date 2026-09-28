@@ -127,13 +127,14 @@ export function buildDigest({ events, upcoming, all, names, now = new Date(), tz
   const table = (heads, rows) =>
     `<table role="presentation" cellpadding="0" cellspacing="0" style="${TABLE}"><tr>${heads.map((h) => `<th style="${TH}">${esc(h)}</th>`).join('')}</tr>` +
     rows.map((r) => `<tr>${r.map((c) => `<td style="${TD}">${c}</td>`).join('')}</tr>`).join('') + '</table>';
+  const tm = (w) => `<span style="white-space:nowrap;">${esc(w)}</span>`; // keep a time range on one line
   const person = (p) => `${esc(p.name)}<br><span style="font-size:13px;">${esc(p.email)}</span>`;
   const h = [];
   if (urgent) h.push(`<p style="margin:0 0 12px;font-weight:700;">${esc(urgentLine)}</p>`);
   h.push(`<p style="margin:0 0 8px;font-size:17px;">${esc(summary)}</p>`);
   if (added.length) {
     h.push(`<h2 style="${H2}">New sign-ups (${added.length})</h2>`);
-    h.push(table(['Applicant', 'When', 'Interviewers'], added.map((a) => [person(a), esc(a.when), esc(a.interviewers)])));
+    h.push(table(['Applicant', 'When', 'Interviewers'], added.map((a) => [person(a), tm(a.when), esc(a.interviewers)])));
   }
   if (cancelled.length || moved.length) {
     h.push(`<h2 style="${H2}">Changes (${cancelled.length + moved.length})</h2>`);
@@ -141,13 +142,13 @@ export function buildDigest({ events, upcoming, all, names, now = new Date(), tz
       ...cancelled.map((c) => [
         '<strong>Cancelled</strong>',
         person(c),
-        `Was ${esc(c.when)}${c.sameBatch ? '<br><em style="font-size:13px;">Signed up and cancelled since the last digest.</em>' : ''}`,
+        `Was ${tm(c.when)}${c.sameBatch ? '<br><em style="font-size:13px;">Signed up and cancelled since the last digest.</em>' : ''}`,
         esc(c.interviewers),
       ]),
       ...moved.map((m) => [
         '<strong>Moved</strong>',
         person(m),
-        `From ${esc(m.from)}<br>To ${esc(m.when)}`,
+        `From ${tm(m.from)}<br>To ${tm(m.when)}`,
         m.fromInterviewers ? `${esc(m.fromInterviewers)} &rarr; ${esc(m.interviewers)}` : esc(m.interviewers),
       ]),
     ];
@@ -155,7 +156,7 @@ export function buildDigest({ events, upcoming, all, names, now = new Date(), tz
   }
   h.push(`<h2 style="${H2}">Next 48 hours</h2>`);
   h.push(soon.length
-    ? table(['When', 'Applicant', 'Interviewers'], soon.map((s) => [esc(s.when), person(s), esc(s.interviewers)]))
+    ? table(['When', 'Applicant', 'Interviewers'], soon.map((s) => [tm(s.when), person(s), esc(s.interviewers)]))
     : '<p style="margin:0;">Nothing scheduled.</p>');
   h.push(`<p style="margin:24px 0 0;font-size:14px;border-top:1px solid #000;padding-top:8px;">${esc(`${active} upcoming interview${active === 1 ? '' : 's'} booked in total.`)} <a href="${esc(baseUrl)}" style="color:#000;">${esc(baseUrl)}</a><br>${esc(note)}</p>`);
   const html = `<!doctype html>

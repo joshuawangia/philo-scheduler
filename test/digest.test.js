@@ -125,4 +125,21 @@ test('CSV: header, local times, quoting, formula-injection guard', () => {
   assert.match(lines[3], /^booked,[^\r]*,"Multi\nLine",'\+1@x\.edu,/); // LF stays inside the quoted cell
   assert.match(lines[4], /,'-2,ok@x\.edu,/);
   assert.equal(lines.at(-1), '');
+  // TAB / CR leading cells are guarded too (CR also forces quoting)
+  const [, tab, cr] = toCsv([iv({ applicant_name: '\t=1+1' }), iv({ applicant_name: '\r=1+1' })], names, TZ).split('\r\n');
+  assert.match(tab, /,'\t=1\+1,/);
+  assert.match(cr, /,"'\r=1\+1",/);
+});
+
+test('HTML keeps each time range on one line; From/To on separate lines', () => {
+  const nw = (t) => `<span style="white-space:nowrap;">${t}</span>`;
+  const m = iv({ interviewers: ['U_ALICE'] });
+  const d = build({
+    events: [ev('booked', iv()), ev('cancelled', iv({ status: 'cancelled' })),
+      ev('rescheduled', m, { before_start_utc: '2026-10-07T22:00:00.000Z', before_end_utc: '2026-10-08T00:00:00.000Z', before_interviewers: ['U_ALICE'] })],
+    upcoming: [iv()],
+  });
+  assert.ok(d.html.includes(`Was ${nw('Mon Oct 5, 6:00 PM–8:00 PM')}`));
+  assert.ok(d.html.includes(`From ${nw('Wed Oct 7, 6:00 PM–8:00 PM')}<br>To ${nw('Mon Oct 5, 6:00 PM–8:00 PM')}`));
+  assert.ok(d.html.split(nw('Mon Oct 5, 6:00 PM–8:00 PM')).length - 1 >= 4); // new sign-up, cancel, move-to, next 48h
 });
