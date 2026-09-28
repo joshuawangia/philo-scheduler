@@ -1,0 +1,23 @@
+{
+  "name": "philo-scheduler",
+  "version": "0.1.0",
+  "description": "Interview scheduler for the Philomathean Society: Slack bot + Google Calendar + applicant booking page",
+  "type": "module",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch --env-file-if-exists=.env src/index.js",
+    "test": "node --test"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@googleapis/calendar": "^20.0.1",
+    "@slack/bolt": "^5.1.0",
+    "express": "^5.2.1",
+    "google-auth-library": "^11.1.0",
+    "luxon": "^3.7.2"
+  }
+}
