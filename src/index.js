@@ -4,11 +4,13 @@ import { config, validateConfig } from './config.js';
 import { openDb } from './db.js';
 import { mountWeb, setOnConnected } from './web.js';
 import { registerSlack, publishHome } from './slack.js';
+import { startDigestRunner } from './digest-runner.js';
 
 const { App, ExpressReceiver, LogLevel } = bolt;
 
 validateConfig();
 openDb();
+startDigestRunner();
 
 const web = express();
 web.set('trust proxy', 1);
