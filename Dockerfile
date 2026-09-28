@@ -4,6 +4,5 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 COPY . .
 ENV NODE_ENV=production DB_PATH=/data/philo.db
-VOLUME /data
 EXPOSE 3000
 CMD ["node", "src/index.js"]
