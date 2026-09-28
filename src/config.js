@@ -16,13 +16,20 @@ export const config = {
     botToken: process.env.SLACK_BOT_TOKEN,
     signingSecret: process.env.SLACK_SIGNING_SECRET,
     appToken: process.env.SLACK_APP_TOKEN, // set => Socket Mode (handy for local dev)
-    notifyChannel: process.env.SLACK_NOTIFY_CHANNEL, // optional channel id for booking notices
     firstCensor: process.env.FIRST_CENSOR_SLACK_ID, // bootstraps the admin role
   },
 
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  },
+
+  email: {
+    smtpUrl: process.env.SMTP_URL, // e.g. smtps://user%40gmail.com:app-password@smtp.gmail.com:465; unset => log only
+    from: process.env.EMAIL_FROM || 'Philo Interviews <no-reply@philomathean.org>',
+    digestTo: process.env.DIGEST_TO || 'firstcensor@philomathean.org',
+    digestHour: Number(process.env.DIGEST_HOUR ?? 8), // local hour the daily digest goes out
+    urgentWindowHours: Number(process.env.URGENT_WINDOW_HOURS ?? 24), // changes this close to an interview email immediately
   },
 };
 
