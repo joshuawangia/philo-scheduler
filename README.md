@@ -5,13 +5,31 @@ Interview scheduler for the Philomathean Society.
 - **Philos** connect their Google Calendar from Slack. The bot only reads when they are free or busy, never what their events say.
 - **Applicants** open a plain page (black Garamond on white), see a list of open times, and click one. They never see who will interview them.
 - The **First Censor** (the admin) can move, reassign, or cancel any interview and change the interview settings from the Slack app's Home tab.
+- Sign-ups are **emailed to the First Censor in batches** (see [Sign-up emails](#sign-up-emails)).
 
 ## How it works
 
 1. The First Censor sets the interview window: dates, daily hours (default 9am–11pm), interview length (default 2 hours), and how many philos sit on each interview (default 2).
 2. The server checks every connected philo's free/busy times. A time appears on the applicant page only if enough philos are free for the whole interview.
-3. When an applicant books, the bot picks the free philos who have done the fewest interviews so far. It creates a Google Calendar event that invites **only those philos**, sends each of them a Slack DM, and posts a notice in a channel if you set one up.
+3. When an applicant books, the bot picks the free philos who have done the fewest interviews so far. It creates a Google Calendar event that invites **only those philos** and sends each of them a Slack DM.
 4. The applicant gets a confirmation page with "Add to Google Calendar" / `.ics` links and a private link they can use to cancel.
+
+## Sign-up emails
+
+New sign-ups, cancellations and moved interviews are emailed to `DIGEST_TO` (default `firstcensor@philomathean.org`), not posted in Slack.
+
+- **Daily digest.** Every morning at `DIGEST_HOUR` (default 8am Eastern), the First Censor gets one email if anything changed since the last one. It lists the new sign-ups, the cancellations and moves, and the schedule for the next 48 hours, with a spreadsheet (CSV file) of every sign-up attached. If nothing changed, no email is sent.
+- **Urgent email.** If a change affects an interview in the next `URGENT_WINDOW_HOURS` (default 24), everything pending is sent right away with `URGENT:` in the subject, because tomorrow morning would be too late.
+- **Failed sends are retried.** A change counts as emailed only after the email actually goes out, so if a send fails, it's retried on the next check (every minute).
+
+Mail is sent over SMTP. The easiest option is a Gmail account with an [app password](https://myaccount.google.com/apppasswords), a special password that lets an app send mail from that account (2-Step Verification must be on):
+
+```
+SMTP_URL=smtps://society.account%40gmail.com:abcdefghijklmnop@smtp.gmail.com:465
+EMAIL_FROM=Philo Interviews <society.account@gmail.com>
+```
+
+If `SMTP_URL` isn't set, emails are only printed in the server log and stay in the queue until mail is set up.
 
 ## Slack commands
 
@@ -65,7 +83,7 @@ Any host that runs Node and has a persistent disk will work, for example Railway
 npm test
 ```
 
-Code map: `src/scheduler.js` builds slots, checks availability, and handles booking. `src/slack.js` has the bot, Home tab, and modals. `src/web.js` and `src/views.js` serve the applicant pages. `src/google.js` wraps the Calendar API. `src/db.js` holds the SQLite storage.
+Code map: `src/digest.js` writes the sign-up email and `src/digest-runner.js` decides when to send it (`src/mailer.js` does the sending). `src/scheduler.js` builds slots, checks availability, and handles booking. `src/slack.js` has the bot, Home tab, and modals. `src/web.js` and `src/views.js` serve the applicant pages. `src/google.js` wraps the Calendar API. `src/db.js` holds the SQLite storage.
 
 ## Privacy notes
 
