@@ -166,18 +166,15 @@ const HELP = [
 export function registerSlack(app) {
   const refreshHomes = (ids) => Promise.all([...new Set([...ids, db.getSetting('first_censor')].filter(Boolean))].map((id) => publishHome(app.client, id).catch(() => {})));
   const dm = (id, text) => app.client.chat.postMessage({ channel: id, text }).catch((e) => console.error('[slack] dm failed', e.data?.error || e.message));
-  const announce = (text) => config.slack.notifyChannel && app.client.chat.postMessage({ channel: config.slack.notifyChannel, text }).catch((e) => console.error('[slack] post failed', e.data?.error || e.message));
 
   // ---- notifications from the scheduler ----
   scheduler.events.on('booked', (iv) => {
     for (const id of iv.interviewers) dm(id, `:calendar: You're interviewing *${applicant(iv)}* on *${fmt(iv.start_utc)}* with ${mentions(iv.interviewers.filter((x) => x !== id))}. A calendar invite is on its way.`);
-    announce(`New interview: *${applicant(iv)}* — ${fmt(iv.start_utc)} with ${mentions(iv.interviewers)}`);
     refreshHomes(iv.interviewers);
   });
   scheduler.events.on('cancelled', (iv, { by } = {}) => {
     const who = by === 'applicant' ? 'the applicant' : `<@${by}>`;
     for (const id of iv.interviewers) dm(id, `:x: *${applicant(iv)}*'s interview on ${fmt(iv.start_utc)} was cancelled by ${who}.`);
-    announce(`Cancelled: *${applicant(iv)}* — ${fmt(iv.start_utc)} (by ${who})`);
     refreshHomes(iv.interviewers);
   });
   scheduler.events.on('rescheduled', (iv, { by, before }) => {
@@ -188,7 +185,6 @@ export function registerSlack(app) {
         : `:arrows_counterclockwise: <@${by}> took you off *${applicant(iv)}*'s interview (${fmt(before.start_utc)}).`;
       dm(id, text);
     }
-    announce(`Updated: *${applicant(iv)}* — now ${fmt(iv.start_utc)} with ${mentions(iv.interviewers)}`);
     refreshHomes(affected);
   });
 
