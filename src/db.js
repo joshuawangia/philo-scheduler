@@ -17,6 +17,7 @@ export const DEFAULT_SETTINGS = {
   location: 'Philomathean Halls, 4th floor of College Hall',
   booking_open: '1',
   first_censor: '',
+  last_digest_date: '', // yyyy-MM-dd local, last day the daily digest ran
 };
 
 export function openDb(file = config.dbPath) {
@@ -49,6 +50,14 @@ export function openDb(file = config.dbPath) {
       interview_id INTEGER NOT NULL REFERENCES interviews(id) ON DELETE CASCADE,
       slack_id TEXT NOT NULL,
       PRIMARY KEY (interview_id, slack_id)
+    );
+    CREATE TABLE IF NOT EXISTS digest_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      kind TEXT NOT NULL,
+      interview_id INTEGER NOT NULL,
+      occurred_at TEXT NOT NULL,
+      detail TEXT,
+      emailed_at TEXT
     );
   `);
   if (config.slack.firstCensor && !getSetting('first_censor')) setSetting('first_censor', config.slack.firstCensor);
@@ -95,6 +104,9 @@ export function upsertMember({ slackId, name, email, refreshToken }) {
 }
 export const organizedUpcoming = (slackId) =>
   db.prepare("SELECT COUNT(*) n FROM interviews WHERE status = 'booked' AND end_utc > ? AND organizer_slack_id = ?").get(new Date().toISOString(), slackId).n;
+export function memberNames() {
+  return Object.fromEntries(db.prepare('SELECT slack_id, name FROM members').all().map((r) => [r.slack_id, r.name || r.slack_id]));
+}
 export const disconnectMember = (slackId) => db.prepare('UPDATE members SET refresh_token = NULL WHERE slack_id = ?').run(slackId);
 
 // ---- interviews ----
@@ -122,6 +134,9 @@ export function bookedBetween(startIso, endIso) {
   return db.prepare("SELECT * FROM interviews WHERE status = 'booked' AND start_utc < ? AND end_utc > ?").all(endIso, startIso).map(hydrate);
 }
 
+// All interviews, any status (for the CSV export).
+export const allInterviews = () => db.prepare('SELECT * FROM interviews ORDER BY start_utc, id').all().map(hydrate);
+
 export function insertInterview(i) {
   const { lastInsertRowid } = db.prepare(`
     INSERT INTO interviews (start_utc, end_utc, applicant_name, applicant_email, applicant_token, organizer_slack_id)
@@ -147,4 +162,19 @@ export function loadCounts() {
   const rows = db.prepare(`SELECT x.slack_id, COUNT(*) n FROM interview_interviewers x
     JOIN interviews i ON i.id = x.interview_id WHERE i.status = 'booked' GROUP BY x.slack_id`).all();
   return Object.fromEntries(rows.map((r) => [r.slack_id, r.n]));
+}
+
+// ---- digest events (booked / cancelled / rescheduled, emailed to the First Censor) ----
+export function recordDigestEvent({ kind, interviewId, detail = null, occurredAt = new Date().toISOString() }) {
+  const { lastInsertRowid } = db.prepare('INSERT INTO digest_events (kind, interview_id, occurred_at, detail) VALUES (?, ?, ?, ?)')
+    .run(kind, interviewId, occurredAt, detail == null ? null : JSON.stringify(detail));
+  return Number(lastInsertRowid);
+}
+export function pendingDigestEvents() {
+  return db.prepare('SELECT id, kind, interview_id, occurred_at, detail FROM digest_events WHERE emailed_at IS NULL ORDER BY id').all()
+    .map((e) => ({ ...e, detail: e.detail ? JSON.parse(e.detail) : null, interview: getInterview(e.interview_id) }));
+}
+export function markDigestEventsEmailed(ids, atIso = new Date().toISOString()) {
+  if (!ids.length) return;
+  db.prepare(`UPDATE digest_events SET emailed_at = ? WHERE id IN (${ids.map(() => '?').join(', ')})`).run(atIso, ...ids);
 }
