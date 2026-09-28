@@ -79,6 +79,13 @@ export async function runDailyIfDue(now = new Date()) {
   return { due: true, ...result };
 }
 
+// One timer tick: the daily digest, then retry any pending urgent change whose earlier send failed.
+export async function tick(now = new Date()) {
+  await runDailyIfDue(now);
+  const urgent = db.pendingDigestEvents().some((e) => isUrgent(e, now, config.email.urgentWindowHours));
+  if (urgent) await flush({ urgent: true, now });
+}
+
 export function startDigestRunner({ intervalMs = 60_000, now = () => new Date() } = {}) {
   const record = (kind, iv, detail) => {
     try {
@@ -100,11 +107,12 @@ export function startDigestRunner({ intervalMs = 60_000, now = () => new Date() 
   scheduler.events.on('rescheduled', onRescheduled);
 
   const timer = setInterval(() => {
-    runDailyIfDue(now()).catch((e) => console.error('[digest] daily run failed', e));
+    tick(now()).catch((e) => console.error('[digest] tick failed', e));
   }, intervalMs);
   timer.unref();
 
   return {
+    timer,
     stop() {
       clearInterval(timer);
       scheduler.events.off('booked', onBooked);

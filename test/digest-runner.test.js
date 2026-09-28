@@ -1,6 +1,7 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import nodemailer from 'nodemailer';
+import { DateTime } from 'luxon';
 process.env.SESSION_SECRET ||= 'x'.repeat(40);
 process.env.TIMEZONE = 'America/New_York';
 delete process.env.DIGEST_HOUR;
@@ -224,9 +225,74 @@ test('timer calls runDailyIfDue and does not hold the process open', async () =>
   db.recordDigestEvent({ kind: 'booked', interviewId: book(Date.now() + 10 * 24 * H).id });
   const r = startDigestRunner({ intervalMs: 5, now: () => new Date('2026-10-11T13:00:00Z') });
   try {
+    assert.equal(r.timer.hasRef(), false, 'timer is unref\'d');
     await settle();
     assert.equal(sent.length, 1);
     assert.equal(db.getSetting('last_digest_date'), '2026-10-11');
+  } finally {
+    r.stop();
+  }
+});
+
+const waitForSend = async () => {
+  for (let i = 0; i < 100 && (!sent.length || db.pendingDigestEvents().length); i++) await new Promise((r) => setTimeout(r, 10));
+};
+const markTodayDone = () => db.setSetting('last_digest_date', DateTime.now().setZone('America/New_York').toISODate());
+
+test('failed urgent send is retried on the next tick even after today\'s daily digest went out', async () => {
+  markTodayDone();
+  failNext = true;
+  const r = startDigestRunner({ intervalMs: 40 });
+  try {
+    scheduler.events.emit('booked', book(Date.now() + 4 * H)); // urgent send fails
+    await new Promise((res) => setTimeout(res, 15));
+    assert.equal(failNext, false, 'the urgent send was attempted');
+    assert.equal(sent.length, 0);
+    assert.equal(db.pendingDigestEvents().length, 1);
+    await waitForSend(); // next tick
+    assert.equal(sent.length, 1);
+    assert.match(sent[0].subject, /^URGENT: /);
+    assert.deepEqual(db.pendingDigestEvents(), []);
+  } finally {
+    r.stop();
+  }
+});
+
+test('urgent flush that joined a failing in-flight send is retried on the next tick', async () => {
+  markTodayDone();
+  const r = startDigestRunner({ intervalMs: 40 });
+  try {
+    db.recordDigestEvent({ kind: 'booked', interviewId: book(Date.now() + 10 * 24 * H).id });
+    failNext = true;
+    const first = flush(); // non-urgent send, will fail
+    scheduler.events.emit('booked', book(Date.now() + 4 * H)); // urgent flush joins the in-flight one
+    assert.equal((await first).skipped, true);
+    assert.equal(sent.length, 0);
+    assert.equal(db.pendingDigestEvents().length, 2);
+    await waitForSend(); // next tick
+    assert.equal(sent.length, 1);
+    assert.match(sent[0].subject, /^URGENT: digest 2$/);
+    assert.deepEqual(db.pendingDigestEvents(), []);
+  } finally {
+    r.stop();
+  }
+});
+
+test('tick does not send non-urgent pending events once today is done', async () => {
+  markTodayDone();
+  db.recordDigestEvent({ kind: 'booked', interviewId: book(Date.now() + 10 * 24 * H).id });
+  await runner.tick(new Date());
+  assert.equal(sent.length, 0);
+  assert.equal(db.pendingDigestEvents().length, 1);
+});
+
+test('a failing recordDigestEvent never throws out of scheduler.events.emit', () => {
+  const r = startDigestRunner();
+  try {
+    const before = db.pendingDigestEvents().length;
+    // No id -> interview_id NOT NULL fails inside the listener.
+    assert.doesNotThrow(() => scheduler.events.emit('booked', { interviewers: [], start_utc: iso(Date.now() + H), end_utc: iso(Date.now() + 3 * H) }));
+    assert.equal(db.pendingDigestEvents().length, before);
   } finally {
     r.stop();
   }
