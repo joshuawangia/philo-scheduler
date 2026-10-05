@@ -1,6 +1,8 @@
 # Builds the app into a ready-to-run image on every push to main, so people can
 # deploy it on Railway by pasting ghcr.io/joshuawangia/philo-scheduler:latest
 # (no GitHub account or code needed).
+# The package must be public for Railway to pull it without a login. It is for this repo;
+# on a fork, check GitHub → your profile → Packages → philo-scheduler → Package settings.
 name: Publish image
 
 on:

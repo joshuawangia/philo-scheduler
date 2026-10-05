@@ -72,7 +72,7 @@ GMAIL_APP_PASSWORD=
 PORT=3000
 ```
 
-When this guide says **📝 Save as `SOMETHING`**, paste the value right after the `=` on that line, with no spaces, like `SLACK_SIGNING_SECRET=8f2b1c…`.
+When this guide says **📝 Save as `SOMETHING`**, paste the value right after the `=` on that line, with no space before or after it, like `SLACK_SIGNING_SECRET=8f2b1c…`. (The Gmail app password can keep the spaces in the middle.)
 
 ---
 
@@ -92,7 +92,7 @@ Railway is a service that keeps the app running on the internet all day.
 6. Still in the box, open the **Settings** tab and scroll to **Networking**. Click **Generate Domain**. If it asks which port, type **3000**.
    You'll get a web address like `philo-interviews-production.up.railway.app`.
 7. Give the app somewhere permanent to save bookings. **This is important:** without it, all bookings are erased whenever the app restarts.
-   - Right-click the **philo-scheduler** box, or press <kbd>Ctrl</kbd>+<kbd>K</kbd> / <kbd>⌘ Cmd</kbd>+<kbd>K</kbd> and type `volume`.
+   - Right-click the **philo-scheduler** box. If that doesn't work, press <kbd>Ctrl</kbd>+<kbd>K</kbd> (<kbd>⌘ Cmd</kbd>+<kbd>K</kbd> on a Mac) and type `volume`.
    - Choose **Attach volume** (or **Add Volume**), and set the **mount path** to:
      ```
      /data
@@ -186,17 +186,23 @@ When everything is ✅, your web address shows the applicant page. You can alway
 ### Step 7: Turn it on in Slack
 
 1. **Let Slack check the connection.** Go back to **[api.slack.com/apps](https://api.slack.com/apps)** → your app → **Event Subscriptions** (in the left menu). Next to **Request URL**, click **Retry** (or **Change** and then **Save**) until it says **Verified ✓**. Click **Save Changes** at the bottom if it appears.
+   If it still won't verify, check that the setup page shows all ✅, and that `SLACK_SIGNING_SECRET` came from **Basic Information → App Credentials → Signing Secret**, not the *Client Secret* or *Verification Token* listed next to it.
 2. **Claim the admin role.** The person who will be First Censor opens Slack, goes to any channel, and types:
    ```
    /philo claim
    ```
-   Slack confirms that you're the First Censor. Only the first person to do this gets the role, so do it right away. You can hand it over later with `/philo censor @name`.
+   Slack confirms that you're the First Censor. Only the first person to do this gets the role, so do it **right away, before telling anyone else about the app**. If someone else gets it first, they can give it back with `/philo censor @you`. You can hand it over later the same way.
 3. **Set the interview dates.** Type `/philo settings`. Pick the first and last interview days, tick **Open for booking**, and click **Save**. The other options are fine as they are: 2-hour interviews between 9am and 11pm, with 2 philos per interview.
 4. **Ask every philo to connect.** Send them [the message in this section](#message-for-philos). Each philo types `/philo connect` and clicks the button.
 5. **Do a test booking.**
-   1. Open your web address, book a time within the next day using your own name and email, and click **Reserve**.
-   2. Within a minute, the philos picked for it should get a Slack message, and **firstcensor@philomathean.org** should get an email starting with **URGENT:**.
-   3. Click **Cancel this interview** on the confirmation page to clean up.
+   1. Wait until at least **2 philos** (you can be one of them) have done `/philo connect`.
+   2. Open your web address, pick any time, enter your own name and email, and click **Reserve**.
+      If no times show up, check that the dates in `/philo settings` include the next few days and that **Open for booking** is ticked.
+   3. Within a minute, the 2 philos picked should get a Slack message and a calendar invite.
+   4. **firstcensor@philomathean.org** gets an email:
+      - right away, with **URGENT:** in the subject, if the interview is within the next 24 hours;
+      - otherwise in the next morning's 8am summary.
+   5. Click **Cancel this interview** on the confirmation page to clean up.
 6. **Share the link with applicants.** Type `/philo link` in Slack to get it. It's your web address.
 
 🎉 **You're done!**
@@ -254,6 +260,7 @@ I'm at Step [1] now.
 | What you see | What to do |
 |---|---|
 | The web address says **"Application failed to respond"** or won't load | In Railway, check that the **philo-scheduler** box says **Active**. Check that `PORT=3000` is in **Variables**, and that **Settings → Networking** uses port **3000**. Click **Deploy** again. |
+| The web address stopped loading right after you pasted your keys | A key is probably wrong. Open the setup page (your web address + `/setup`) and fix any ❌. If the page won't load at all, open Railway → the box → **Deployments → View logs**. **invalid_auth** in the logs means `SLACK_BOT_TOKEN` is wrong: copy it again from Slack → your app → **Install App**. |
 | The setup page shows a ❌ | Read the hint next to it. Usually a key was cut off, has a space in it, or was pasted into the wrong line. Fix it in Railway → **Variables → Raw Editor**, click **Update Variables**, then **Deploy**. |
 | Bookings or connections disappeared | The volume is missing. Add one with the mount path `/data` ([Step 2.7](#step-2-put-the-app-online)). Philos will need to reconnect once. |
 | `/philo` says **"dispatch_failed"** or nothing happens | Do [Step 7.1](#step-7-turn-it-on-in-slack) (Verified ✓). If you made a new Railway web address, recreate the Slack app from the setup page's manifest. |
