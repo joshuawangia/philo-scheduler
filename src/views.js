@@ -119,7 +119,7 @@ export function setupPage({ checks, address, baseUrlSet = true, manifest = '' })
     .join('');
   const pastes = [
     ['Google → Authorized redirect URI', `${address}/oauth/google/callback`, 1],
-    ['Slack → Create app → From a manifest (YAML)', manifest.replaceAll('https://philo-interviews.example.com', address), 24],
+    ['Slack → Create app → From a manifest (YAML)', manifest.replace(/^(#.*\n)+/, '').replaceAll('https://philo-interviews.example.com', address), 24],
     ['Applicant link', address, 1],
   ]
     .map(([label, text, lines], i) => `
@@ -143,7 +143,7 @@ export function setupPage({ checks, address, baseUrlSet = true, manifest = '' })
 h2 { font-weight: 400; font-size: 24px; text-align: center; margin: 40px 0 16px; }
 </style>
 <h1>Setup checklist</h1>
-<p class="note">${blocking ? 'A few settings are missing or wrong. Add them where you host the app (for example Railway → Variables), then restart.' : 'Everything required is set.'}</p>
+<p class="note">${blocking ? 'A few settings are missing or wrong. Add them where you host the app (for example Railway → Variables), click Deploy in Railway, then refresh this page.' : 'Everything required is set.'}</p>
 <ul class="checklist">${rows}</ul>
 <h2>Copy and paste</h2>
 ${pastes}

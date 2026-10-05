@@ -1,50 +1,50 @@
 import express from 'express';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import bolt from '@slack/bolt';
-import { config, checkConfig, blockers, warnings, setupSecret } from './config.js';
+import { config, checkConfig, blockers, warnings, setupSecret, isAuthError } from './config.js';
 import { openDb } from './db.js';
-import { mountWeb, setOnConnected } from './web.js';
+import { mountWeb, setOnConnected, createSetupApp, setupHandler } from './web.js';
 import { registerSlack, publishHome } from './slack.js';
 import { startDigestRunner } from './digest-runner.js';
-import { setupPage } from './views.js';
 
 const { App, ExpressReceiver, LogLevel } = bolt;
-const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-// Setup checklist: names and ✅/❌ only, plus the exact text to paste into Google and Slack.
-const manifest = () => {
+// Not configured yet: don't start Slack, just show the checklist on every page.
+function serveSetup(checkOpts = {}) {
+  const missing = blockers(checkConfig(process.env, checkOpts));
+  console.error(`[setup] missing or invalid settings: ${missing.map((c) => c.name).join(', ')}. Open this app in a browser to see the setup checklist.`);
+  createSetupApp({ checkOpts }).listen(config.port, () => console.log(`philo-scheduler setup checklist on port ${config.port}`));
+}
+
+// A well-formed but wrong bot token would otherwise crash Bolt at startup (invalid_auth).
+async function slackRejectsToken() {
+  if (process.env.NODE_ENV === 'test') return false; // matches tokenVerificationEnabled below
+  // Plain fetch, not WebClient: keeps this check independent of Bolt's HTTP stack.
   try {
-    return fs.readFileSync(path.join(root, 'slack-manifest.yml'), 'utf8');
-  } catch {
-    return '';
+    const res = await fetch('https://slack.com/api/auth.test', {
+      method: 'POST', headers: { Authorization: `Bearer ${config.slack.botToken}` }, signal: AbortSignal.timeout(15000),
+    });
+    const data = await res.json();
+    if (data.ok || !isAuthError({ data })) return false;
+    console.error(`[setup] Slack rejected SLACK_BOT_TOKEN (${data.error})`);
+    return true;
+  } catch (e) {
+    console.warn(`[setup] could not check SLACK_BOT_TOKEN with Slack: ${e.message}`);
+    return false;
   }
-};
-const sendSetup = (req, res) => {
-  const baseUrlSet = !!process.env.BASE_URL;
-  const address = baseUrlSet ? process.env.BASE_URL.trim().replace(/\/+$/, '') : `${req.protocol}://${req.get('host')}`;
-  res.set('Cache-Control', 'no-store').send(setupPage({ checks: checkConfig(process.env), address, baseUrlSet, manifest: manifest() }));
-};
+}
 
 const checks = checkConfig(process.env);
-const missing = blockers(checks);
 for (const w of warnings(checks)) console.warn(`[setup] warning: ${w}`);
 
-const web = express();
-web.set('trust proxy', 1);
-
-if (missing.length) {
-  // Not configured yet: don't start Slack, just show the checklist on every page.
-  console.error(`[setup] missing or invalid settings: ${missing.map((c) => c.name).join(', ')}. Open this app in a browser to see the setup checklist.`);
-  web.get('/healthz', (_req, res) => res.send('setup needed'));
-  web.use(express.static(path.join(root, 'public'), { maxAge: '1h' }));
-  web.use(sendSetup);
-  web.listen(config.port, () => console.log(`philo-scheduler setup checklist on port ${config.port}`));
-} else {
+if (blockers(checks).length) serveSetup();
+else if (await slackRejectsToken()) serveSetup({ slackRejected: true });
+else {
   setupSecret();
   openDb();
   startDigestRunner();
+
+  const web = express();
+  web.set('trust proxy', 1);
 
   let app;
   if (config.slack.appToken) {
@@ -57,7 +57,7 @@ if (missing.length) {
   }
 
   registerSlack(app);
-  web.get('/setup', sendSetup);
+  web.get('/setup', setupHandler());
   mountWeb(web);
   setOnConnected((slackId) => publishHome(app.client, slackId).catch(() => {}));
 

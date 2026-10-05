@@ -40,7 +40,8 @@ const isLocal = (u) => /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/.test(u)
 
 // Pure check of every setting a newcomer has to provide. Never includes values, only names.
 // Returns [{ name, ok, required, hint, warn? }]; !ok && required blocks startup, warn is logged/shown.
-export function checkConfig(env = process.env) {
+// slackRejected: Slack answered invalid_auth (or similar) for a well-formed bot token.
+export function checkConfig(env = process.env, { slackRejected = false } = {}) {
   const has = (k) => !!(env[k] && String(env[k]).trim());
   const out = [];
   const add = (name, ok, required, hint, warn) => out.push({ name, ok: !!ok, required, hint, ...(warn ? { warn } : {}) });
@@ -51,15 +52,16 @@ export function checkConfig(env = process.env) {
     'The public web address of this app, starting with https:// and with no slash at the end (e.g. https://philo.up.railway.app)',
     baseOk && isLocal(base) && env.NODE_ENV === 'production' ? 'BASE_URL is still http://localhost, so links in Slack and emails will not work for anyone else' : undefined);
 
-  add('SLACK_BOT_TOKEN', has('SLACK_BOT_TOKEN') && env.SLACK_BOT_TOKEN.startsWith('xoxb-'), true,
+  if (slackRejected) add('SLACK_BOT_TOKEN', false, true, 'Slack rejected this token. Copy it again from Slack → your app → Install App (it starts with xoxb-)');
+  else add('SLACK_BOT_TOKEN', has('SLACK_BOT_TOKEN') && env.SLACK_BOT_TOKEN.startsWith('xoxb-'), true,
     'Slack → your app → Install App → Bot User OAuth Token (starts with xoxb-)');
   if (has('SLACK_APP_TOKEN')) add('SLACK_SIGNING_SECRET', true, false, 'Not needed: SLACK_APP_TOKEN is set, so Slack connects by Socket Mode');
-  else add('SLACK_SIGNING_SECRET', has('SLACK_SIGNING_SECRET'), true, 'Slack → your app → Basic Information → App Credentials → Signing Secret');
+  else add('SLACK_SIGNING_SECRET', has('SLACK_SIGNING_SECRET'), true, "Slack → your app → Basic Information → App Credentials → Signing Secret. If Slack's Request URL won't verify, this is usually wrong");
 
   add('GOOGLE_CLIENT_ID', has('GOOGLE_CLIENT_ID') && env.GOOGLE_CLIENT_ID.trim().endsWith('.apps.googleusercontent.com'), true,
-    'Google Cloud Console → APIs & Services → Credentials → your OAuth client → Client ID (ends with .apps.googleusercontent.com)');
+    'Google Cloud → Google Auth Platform → Clients → your client → Client ID (ends with .apps.googleusercontent.com)');
   add('GOOGLE_CLIENT_SECRET', has('GOOGLE_CLIENT_SECRET'), true,
-    'Google Cloud Console → APIs & Services → Credentials → your OAuth client → Client secret');
+    'Google Cloud → Google Auth Platform → Clients → your client → Client secret (usually starts with GOCSPX-)');
 
   add('SESSION_SECRET', !has('SESSION_SECRET') || env.SESSION_SECRET.length >= 32, true,
     'Optional: leave it blank and one is made for you. If you set it, use at least 32 random characters');
@@ -77,6 +79,10 @@ export function checkConfig(env = process.env) {
     gmailWarn(has('GMAIL_APP_PASSWORD'), passOk, 'GMAIL_APP_PASSWORD should be 16 letters (spaces are fine), so emails will probably not be sent'));
   return out;
 }
+
+// Slack errors meaning the bot token itself is bad (vs. Slack being unreachable).
+const AUTH_ERRORS = new Set(['invalid_auth', 'not_authed', 'account_inactive', 'token_revoked']);
+export const isAuthError = (err) => !!err && [err.data?.error, err.original?.data?.error, err.code].some((c) => AUTH_ERRORS.has(c));
 
 export const blockers = (checks) => checks.filter((c) => c.required && !c.ok);
 export const warnings = (checks) => checks.filter((c) => c.warn).map((c) => (c.warn.startsWith(c.name) ? c.warn : `${c.name}: ${c.warn}`));

@@ -1,13 +1,16 @@
 import express from 'express';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as db from './db.js';
 import * as google from './google.js';
 import * as scheduler from './scheduler.js';
 import { verify, encrypt } from './crypto.js';
-import { slotsPage, interviewPage, messagePage, icsFile } from './views.js';
+import { checkConfig } from './config.js';
+import { slotsPage, interviewPage, messagePage, icsFile, setupPage } from './views.js';
 
-const publicDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public');
+const rootDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+const publicDir = path.join(rootDir, 'public');
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Called after a philo connects Google so Slack can refresh their App Home.
@@ -26,6 +29,34 @@ function rateLimit({ max, windowMs }) {
     if (list.length > max) return res.status(429).send(messagePage('Slow down', 'Too many attempts. Please wait a few minutes and try again.'));
     next();
   };
+}
+
+// ---- setup checklist: names and ✅/❌ only, plus the exact text to paste into Google and Slack ----
+function readManifest() {
+  try {
+    return fs.readFileSync(path.join(rootDir, 'slack-manifest.yml'), 'utf8');
+  } catch {
+    return '';
+  }
+}
+
+// Express handler; checkOpts is passed to checkConfig (e.g. { slackRejected: true }).
+export function setupHandler({ env = process.env, checkOpts = {} } = {}) {
+  return (req, res) => {
+    const baseUrlSet = !!env.BASE_URL?.trim();
+    const address = baseUrlSet ? env.BASE_URL.trim().replace(/\/+$/, '') : `${req.protocol}://${req.get('host')}`;
+    res.set('Cache-Control', 'no-store').send(setupPage({ checks: checkConfig(env, checkOpts), address, baseUrlSet, manifest: readManifest() }));
+  };
+}
+
+// Standalone server used until required settings are in place: every page is the checklist.
+export function createSetupApp(opts = {}) {
+  const app = express();
+  app.set('trust proxy', 1);
+  app.get('/healthz', (_req, res) => res.send('setup needed'));
+  app.use(express.static(publicDir, { maxAge: '1h' }));
+  app.use(setupHandler(opts));
+  return app;
 }
 
 export function mountWeb(app) {

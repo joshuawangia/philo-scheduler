@@ -80,7 +80,7 @@ test('session secret file is created once (0600) and reused; env wins', () => {
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
-const manifest = 'slash_commands:\n  url: https://philo-interviews.example.com/slack/events\nrequest_url: https://philo-interviews.example.com/slack/events\n';
+const manifest = '# Create the app at https://api.slack.com/apps\n# Replace https://philo-interviews.example.com with your BASE_URL.\nslash_commands:\n  url: https://philo-interviews.example.com/slack/events\nrequest_url: https://philo-interviews.example.com/slack/events\n';
 
 test('setup page lists names but never secret values', () => {
   const env = { ...good, SLACK_BOT_TOKEN: 'xoxp-LEAKME-123', SESSION_SECRET: 'S3CRET'.repeat(8) };
@@ -95,7 +95,7 @@ test('setup page has copy-paste text with the address substituted', () => {
   const html = setupPage({ checks: checkConfig(good), address: 'https://philo.example.org', manifest });
   assert.match(html, /https:\/\/philo\.example\.org\/oauth\/google\/callback/);
   assert.match(html, /url: https:\/\/philo\.example\.org\/slack\/events/);
-  assert.doesNotMatch(html, /philo-interviews\.example\.com/);
+  assert.doesNotMatch(html, /philo-interviews\.example\.com|# Replace|# Create/);
   assert.match(html, /Google → Authorized redirect URI/);
   assert.match(html, /Slack → Create app → From a manifest \(YAML\)/);
   assert.match(html, /Applicant link/);
