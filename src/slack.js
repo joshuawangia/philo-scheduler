@@ -83,6 +83,7 @@ export async function publishHome(client, userId) {
     });
   }
   blocks.push(md(`Applicant sign-up page: ${config.baseUrl}`));
+  if (!db.getSetting('first_censor')) blocks.push(divider, md(':scroll: *No First Censor yet* — the First Censor should type `/philo claim`.'));
 
   const mine = db.upcomingInterviews({ slackId: userId });
   blocks.push(divider, md('*Your upcoming interviews*'));
@@ -160,6 +161,7 @@ const HELP = [
   '*/philo disconnect* — stop being scheduled',
   '*/philo list* — your upcoming interviews (First Censor: all of them)',
   '*/philo link* — the applicant sign-up link',
+  '*/philo claim* — become the First Censor (only works while nobody is)',
   '_First Censor only:_ */philo settings*, */philo open*, */philo close*, */philo censor @someone* (hand off the role)',
 ].join('\n');
 
@@ -320,12 +322,18 @@ export function registerSlack(app) {
       case 'censor': {
         const target = rest.join(' ').match(/<@([UW][A-Z0-9]+)/)?.[1];
         const current = db.getSetting('first_censor');
-        if (!target) return respond(current ? `The First Censor is <@${current}>.` : 'No First Censor is set. Set FIRST_CENSOR_SLACK_ID.');
+        if (!target) return respond(current ? `The First Censor is <@${current}>.` : 'No First Censor yet — the First Censor should type /philo claim.');
         if (!(await requireCensor(userId, respond))) return;
         db.setSetting('first_censor', target);
         await Promise.all([publishHome(client, userId), publishHome(client, target)].map((p) => p.catch(() => {})));
         dm(target, `:scroll: <@${userId}> made you the *First Censor*. Open the Home tab of this app to manage interviews.`);
         return respond(`<@${target}> is now the First Censor.`);
+      }
+      case 'claim': {
+        const { ok, current } = db.claimFirstCensor(userId);
+        if (!ok) return respond(current === userId ? 'You are already the First Censor.' : `The First Censor is <@${current}>. Only they can hand it over with /philo censor @someone.`);
+        await publishHome(client, userId).catch(() => {});
+        return respond(':scroll: You are now the *First Censor*. Open the Home tab of this app to manage interviews.');
       }
       default:
         return respond(HELP);

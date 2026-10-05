@@ -107,3 +107,56 @@ export function icsFile(iv, location) {
 }
 
 export const messagePage = (title, text) => layout(title, `<h1>${esc(title)}</h1><p class="note">${esc(text)}</p>`);
+
+// Setup checklist for first-time installs. Shows setting names and ✅/❌ only, never values.
+export function setupPage({ checks, address, baseUrlSet = true, manifest = '' }) {
+  const rows = checks
+    .map((c) => {
+      const hint = c.name === 'BASE_URL' && !baseUrlSet ? `Copy this exact address into Railway as BASE_URL: ${address}` : c.hint;
+      const mark = c.ok ? '✅' : c.required ? '❌' : '⚠️';
+      return `<li><span class="mark">${mark}</span> <strong>${esc(c.name)}</strong>${c.required ? '' : ' <em>(optional)</em>'}<br><span class="hint">${esc(hint)}</span>${!c.ok && c.warn ? `<br><span class="hint"><em>${esc(c.warn)}</em></span>` : ''}</li>`;
+    })
+    .join('');
+  const pastes = [
+    ['Google → Authorized redirect URI', `${address}/oauth/google/callback`, 1],
+    ['Slack → Create app → From a manifest (YAML)', manifest.replaceAll('https://philo-interviews.example.com', address), 24],
+    ['Applicant link', address, 1],
+  ]
+    .map(([label, text, lines], i) => `
+<div class="paste">
+  <label for="p${i}">${esc(label)}</label>
+  <textarea id="p${i}" readonly rows="${lines}">${esc(text)}</textarea>
+  <button type="button" data-copy="p${i}">Copy</button>
+</div>`)
+    .join('');
+  const blocking = checks.some((c) => c.required && !c.ok);
+  return layout(
+    'Setup checklist',
+    `<style>
+.checklist { list-style: none; padding: 0; margin: 24px 0 40px; }
+.checklist li { margin: 0 0 16px; }
+.checklist .hint { font-size: 16px; }
+.paste { margin: 0 0 32px; }
+.paste label { display: block; font-variant: small-caps; letter-spacing: 0.05em; border-bottom: 1px solid #000; margin-bottom: 8px; }
+.paste textarea { width: 100%; font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace; border: 1px solid #000; border-radius: 0; padding: 8px; color: #000; background: #fff; resize: vertical; }
+.paste button { margin: 8px 0 0; font-size: 16px; padding: 2px 16px; }
+h2 { font-weight: 400; font-size: 24px; text-align: center; margin: 40px 0 16px; }
+</style>
+<h1>Setup checklist</h1>
+<p class="note">${blocking ? 'A few settings are missing or wrong. Add them where you host the app (for example Railway → Variables), then restart.' : 'Everything required is set.'}</p>
+<ul class="checklist">${rows}</ul>
+<h2>Copy and paste</h2>
+${pastes}
+<script>
+document.querySelectorAll('[data-copy]').forEach(function (b) {
+  b.addEventListener('click', function () {
+    var t = document.getElementById(b.getAttribute('data-copy'));
+    t.select();
+    var done = function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1500); };
+    if (navigator.clipboard) navigator.clipboard.writeText(t.value).then(done, function () { try { document.execCommand('copy'); done(); } catch (e) {} });
+    else { try { document.execCommand('copy'); done(); } catch (e) {} }
+  });
+});
+</script>`,
+  );
+}
