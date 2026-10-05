@@ -91,6 +91,16 @@ export function getSettings() {
 }
 export const isFirstCensor = (slackId) => !!slackId && getSetting('first_censor') === slackId;
 
+// /philo claim: the first person to claim becomes First Censor; after that only a hand-off changes it.
+export function claimFirstCensor(slackId) {
+  return tx(() => {
+    const current = getSetting('first_censor');
+    if (current) return { ok: false, current };
+    setSetting('first_censor', slackId);
+    return { ok: true, current: slackId };
+  });
+}
+
 // ---- members (philos) ----
 export const getMember = (slackId) => db.prepare('SELECT * FROM members WHERE slack_id = ?').get(slackId);
 export const connectedMembers = () => db.prepare('SELECT * FROM members WHERE refresh_token IS NOT NULL ORDER BY name').all();
