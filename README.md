@@ -198,7 +198,7 @@ When everything is ✅, your web address shows the applicant page. You can alway
    1. Wait until at least **2 philos** (you can be one of them) have done `/philo connect`.
    2. Open your web address, pick any time, enter your own name and email, and click **Reserve**.
       If no times show up, check that the dates in `/philo settings` include the next few days and that **Open for booking** is ticked.
-   3. Within a minute, the 2 philos picked should get a Slack message and a calendar invite.
+   3. Within a minute, the 2 philos picked should get a Slack message, and the interview should appear on their Google Calendars.
    4. **firstcensor@philomathean.org** gets an email:
       - right away, with **URGENT:** in the subject, if the interview is within the next 24 hours;
       - otherwise in the next morning's 8am summary.
@@ -317,7 +317,7 @@ When a new version is released, open Railway, click the **philo-scheduler** box,
 
 ## For developers
 
-Requires **Node 22.13+**. Every push to `main` runs the tests and publishes `ghcr.io/joshuawangia/philo-scheduler:latest` ([workflow](.github/workflows/docker.yml)).
+Requires **Node 22.13+ or 24** (the published image uses 24). Avoid Node 26 for local Socket Mode: its built-in `fetch` hangs on Slack's `apps.connections.open`. Every push to `main` runs the tests and publishes `ghcr.io/joshuawangia/philo-scheduler:latest` ([workflow](.github/workflows/docker.yml)).
 
 ```bash
 git clone https://github.com/joshuawangia/philo-scheduler && cd philo-scheduler
