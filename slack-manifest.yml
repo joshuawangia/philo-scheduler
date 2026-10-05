@@ -16,7 +16,7 @@ features:
     - command: /philo
       url: https://philo-interviews.example.com/slack/events
       description: Interview scheduling (connect, list, settings…)
-      usage_hint: "connect | list | link | settings | open | close | censor @user"
+      usage_hint: "connect | list | link | claim | settings | open | close | censor @user"
       should_escape: true
 oauth_config:
   scopes:

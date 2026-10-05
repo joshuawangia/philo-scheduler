@@ -4,297 +4,346 @@
 
 An interview scheduler for the Philomathean Society.
 
-- **Philos** (members) connect their Google Calendar from Slack. The app only reads whether they are free or busy, never what their events say.
-- **Applicants** open a plain page (black Garamond on white), pick a time from the list of open ones, and they're booked. They never see who will interview them.
-- **The First Censor** (the admin) gets every sign-up by email in a daily digest, and can move, reassign, or cancel any interview from Slack.
+- **Applicants** open a simple web page, see the open interview times, and click one.
+- **Philos** connect their Google Calendar once through Slack, so they're only offered for times they're actually free.
+- **The First Censor** gets every sign-up by email each morning, and can move or cancel any interview in Slack.
 
-> **Setting this up for the first time?** Skip to [Setup guide](#setup-guide). It takes about 45 minutes and doesn't require writing any code. If you'd like an AI assistant to walk you through it, use the [AI setup prompt](#set-it-up-with-an-ai-assistant).
+**👉 Setting it up?** Follow the [Setup guide](#setup-guide) below. You don't need any technical experience, a GitHub account, or any code. It takes about an hour, and you can stop and come back at any point.
 
 ---
 
 ## Contents
 
-- [How it works](#how-it-works)
 - [Setup guide](#setup-guide)
-  - [What you need](#what-you-need)
-  - [Step 1: Put the app online (Railway)](#step-1-put-the-app-online-railway)
-  - [Step 2: Google Calendar access](#step-2-google-calendar-access)
-  - [Step 3: The Slack app](#step-3-the-slack-app)
-  - [Step 4: The email account for digests](#step-4-the-email-account-for-digests)
-  - [Step 5: Fill in the settings](#step-5-fill-in-the-settings)
-  - [Step 6: First run](#step-6-first-run)
-- [Set it up with an AI assistant](#set-it-up-with-an-ai-assistant)
-- [Using it](#using-it)
-- [All settings](#all-settings)
+  - [Before you start](#before-you-start)
+  - [Step 1: Make your notes page](#step-1-make-your-notes-page)
+  - [Step 2: Put the app online](#step-2-put-the-app-online)
+  - [Step 3: Let philos connect Google Calendar](#step-3-let-philos-connect-google-calendar)
+  - [Step 4: Create the Slack app](#step-4-create-the-slack-app)
+  - [Step 5: Set up the email account](#step-5-set-up-the-email-account)
+  - [Step 6: Give the app your keys](#step-6-give-the-app-your-keys)
+  - [Step 7: Turn it on in Slack](#step-7-turn-it-on-in-slack)
+- [Stuck? Get help from an AI assistant](#stuck-get-help-from-an-ai-assistant)
 - [Troubleshooting](#troubleshooting)
+- [Day-to-day use](#day-to-day-use)
+- [Updating the app](#updating-the-app)
 - [For developers](#for-developers)
 - [Privacy](#privacy)
 
 ---
 
-## How it works
-
-1. The First Censor picks the interview dates in Slack. By default interviews are **2 hours**, start **every hour**, and must fit **between 9am and 11pm**, with **2 philos** per interview.
-2. The app checks every connected philo's Google Calendar. A time appears on the applicant page only if enough philos are free for the whole interview.
-3. When an applicant picks a time, the app assigns the free philos who have done the fewest interviews so far, puts the interview on their Google Calendars, and sends each of them a Slack message.
-4. The applicant sees a confirmation page with "Add to Google Calendar" and a private link to cancel.
-5. The First Censor gets the sign-ups by email:
-   - **One digest each morning at 8am**, only if something changed. It lists new sign-ups, cancellations, moved interviews, and the next 48 hours, with a spreadsheet of everyone attached.
-   - **An urgent email right away** if a change affects an interview in the next 24 hours.
-
----
-
 ## Setup guide
 
-### What you need
+### Before you start
 
-| Thing | Why | Cost |
+**You'll need:**
+
+| | What | Cost |
 |---|---|---|
-| A **GitHub** account | To copy this code | Free |
-| A **Railway** account ([railway.com](https://railway.com)) | Runs the app on the internet 24/7 | About $5/month (Hobby plan) |
-| A **Google** account | To create the "Sign in with Google" setup that lets philos connect calendars | Free |
-| **Admin access to your Slack workspace** (or someone who has it) | To install the Slack app | Free |
-| A **Gmail account for the society** (e.g. `philo.interviews@gmail.com`) | Sends the digest emails | Free |
+| 💳 | A credit or debit card, for the service that runs the app | About **$5 a month** |
+| 💬 | To be an **admin of your Slack workspace**, or to know who is (they'll click "Approve" once) | Free |
+| 📧 | A **Gmail account for the society** that will send the sign-up emails. Make a new one if you like, e.g. `philo.interviews@gmail.com`. | Free |
+| ⏱️ | About **an hour** on a laptop or desktop computer, not a phone | |
 
-Keep a notes file open while you go. You'll collect about **ten values** (keys and IDs) and paste them all into Railway in Step 5. **Treat them like passwords:** don't post them in Slack or commit them to GitHub.
+**Words you'll see:**
 
-### Step 1: Put the app online (Railway)
+- **Key** (also called a *token*, *secret*, or *ID*): a long jumble of letters, like `xoxb-7731…`. It's a password that lets two services talk to each other. You'll copy a few of them from websites into your notes page. **Treat them like passwords:** don't share them or post them anywhere.
+- **Web address**: the link where your app lives, like `https://philo-interviews-production.up.railway.app`.
+- **Paste**: <kbd>Ctrl</kbd>+<kbd>V</kbd> on Windows, <kbd>⌘ Cmd</kbd>+<kbd>V</kbd> on a Mac. **Copy**: <kbd>Ctrl</kbd>+<kbd>C</kbd> or <kbd>⌘ Cmd</kbd>+<kbd>C</kbd>.
 
-You do this first because the other steps need the app's web address.
+**How it fits together:** you'll put the app online first, on a service called **Railway**. Then you'll collect keys from **Google**, **Slack**, and **Gmail**, and paste them all into Railway. The app has a **setup page** that shows a ✅ or ❌ next to each key, so you can always see what's left.
 
-1. Fork this repository: click **Fork** at the top of this page on GitHub. You now have your own copy.
-2. Go to [railway.com](https://railway.com), sign in with GitHub, and click **New Project → Deploy from GitHub repo**. Pick your fork.
-3. The first deploy will **crash**. That's expected, because the settings aren't filled in yet.
-4. Click the service, open **Settings → Networking**, and click **Generate Domain**. You'll get something like `philo-interviews-production.up.railway.app`.
-   📝 Save it as **`BASE_URL`**, with `https://` in front and no slash at the end: `https://philo-interviews-production.up.railway.app`
-5. Give the app a permanent disk so bookings survive restarts: right-click the service (or use the **+** button) → **Add Volume**, and set the mount path to **`/data`**.
-
-### Step 2: Google Calendar access
-
-This creates the "Sign in with Google" screen philos see when they connect their calendar.
-
-1. Go to [console.cloud.google.com](https://console.cloud.google.com), and create a new project from the project picker at the top (name it e.g. `Philo Interviews`).
-2. Turn on the Calendar API: search for **Google Calendar API** in the top search bar, open it, and click **Enable**.
-3. Set up the consent screen (**APIs & Services → OAuth consent screen**, which newer consoles call **Google Auth Platform**):
-   - **App name:** `Philo Interviews`. **User support email:** your email.
-   - **Audience:** **External**. (Choose **Internal** only if every philo uses the same Google Workspace, e.g. all `@philomathean.org` accounts.)
-   - **Data access / Scopes:** add `.../auth/calendar.freebusy` and `.../auth/calendar.events`.
-   - **Publishing status:** click **Publish app** so it says **In production**.
-     ⚠️ **Don't skip this.** In "Testing" mode, Google disconnects every philo after 7 days. Google won't formally verify an app like this, so philos will see a *"Google hasn't verified this app"* screen when connecting. That's fine: they click **Advanced → Go to Philo Interviews**. It works for up to 100 people.
-4. Create the login keys (**APIs & Services → Credentials → Create credentials → OAuth client ID**):
-   - **Application type:** **Web application**
-   - **Authorized redirect URIs:** add `BASE_URL` followed by `/oauth/google/callback`, e.g. `https://philo-interviews-production.up.railway.app/oauth/google/callback`
-   - Click **Create**. 📝 Save the **Client ID** as **`GOOGLE_CLIENT_ID`** and the **Client secret** as **`GOOGLE_CLIENT_SECRET`**.
-
-### Step 3: The Slack app
-
-1. Open [`slack-manifest.yml`](slack-manifest.yml) from your fork and copy all of it. Paste it into a text editor and replace **all three** `https://philo-interviews.example.com` with your `BASE_URL`.
-2. Go to [api.slack.com/apps](https://api.slack.com/apps) and click **Create New App → From a manifest**. Pick your workspace, choose **YAML**, paste the edited manifest, and click **Next → Create**.
-3. On the app's **Basic Information** page, find **App Credentials**. 📝 Save the **Signing Secret** as **`SLACK_SIGNING_SECRET`**.
-4. In the left menu, open **Install App** and click **Install to Workspace → Allow**. If you're not a Slack admin, this sends a request to one.
-   📝 Save the **Bot User OAuth Token** (starts with `xoxb-`) as **`SLACK_BOT_TOKEN`**.
-5. Find the First Censor's Slack ID: in Slack, click their name → **View full profile** → **⋮** (more) → **Copy member ID**.
-   📝 Save it as **`FIRST_CENSOR_SLACK_ID`** (looks like `U04ABCDE123`).
-
-> Slack will say the request URL isn't verified yet. That's normal until Step 5 is done; it verifies itself once the app is running.
-
-### Step 4: The email account for digests
-
-The daily digest is sent from a Gmail account using an **app password**, a special password that lets an app send mail as that account.
-
-1. Sign in to the society Gmail account.
-2. Turn on **2-Step Verification** at [myaccount.google.com/security](https://myaccount.google.com/security). App passwords require it.
-3. Go to [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords), type the name `Philo Interviews`, and click **Create**. You'll get 16 letters like `abcd efgh ijkl mnop`.
-4. Build the `SMTP_URL` using the account's address, but write the `@` in the address as `%40`, and remove the spaces from the password:
-
-   ```
-   smtps://philo.interviews%40gmail.com:abcdefghijklmnop@smtp.gmail.com:465
-   ```
-
-   📝 Save it as **`SMTP_URL`**. Also save **`EMAIL_FROM`** as `Philo Interviews <philo.interviews@gmail.com>`, using your account's address.
-
-Emails go to `firstcensor@philomathean.org` by default. To send them somewhere else, also save **`DIGEST_TO`**.
-
-### Step 5: Fill in the settings
-
-1. Make one more value, **`SESSION_SECRET`**: a long random password that encrypts everyone's calendar access. Any 64 random letters and numbers will do. On a Mac or Linux terminal you can run `openssl rand -hex 32`. ⚠️ Never change it later, or every philo will have to reconnect.
-2. In Railway, click the service, open **Variables → Raw Editor**, and paste this with your values filled in:
-
-   ```
-   BASE_URL=https://philo-interviews-production.up.railway.app
-   SESSION_SECRET=
-   SLACK_BOT_TOKEN=
-   SLACK_SIGNING_SECRET=
-   FIRST_CENSOR_SLACK_ID=
-   GOOGLE_CLIENT_ID=
-   GOOGLE_CLIENT_SECRET=
-   SMTP_URL=
-   EMAIL_FROM=
-   ```
-
-3. Click **Update Variables**, then **Deploy**. After a minute, open `BASE_URL` followed by `/healthz` in your browser. It should say **ok**.
-
-### Step 6: First run
-
-1. **Check the Slack app.** At [api.slack.com/apps](https://api.slack.com/apps), open **Event Subscriptions** and click **Retry** next to the Request URL until it shows **Verified ✓**.
-2. **Set the interview dates (First Censor).** In Slack, type `/philo settings`. Pick the first and last interview days, check the hours and length, check **Open for booking**, and click **Save**.
-3. **Connect calendars (every philo).** Each philo types `/philo connect`, clicks **Connect Google Calendar**, and signs in. If they see "Google hasn't verified this app", they click **Advanced → Go to Philo Interviews**.
-   You can check who's connected in the app's **Home** tab (click **Philo Interviews** in Slack's sidebar).
-4. **Send applicants the link.** Type `/philo link` to get it. It's just your `BASE_URL`.
-5. **Test it.** Book a fake interview yourself using your own email, pick a time within the next 24 hours, and check that:
-   - the assigned philos got a Slack message and a calendar invite
-   - `firstcensor@philomathean.org` got an email starting with `URGENT:`
-
-   Then cancel it from the confirmation page.
-
-🎉 You're done.
+> 💡 Websites change their buttons from time to time. If a button in this guide has a slightly different name, look for the closest match. If you get stuck, use the [AI assistant prompt](#stuck-get-help-from-an-ai-assistant).
 
 ---
 
-## Set it up with an AI assistant
+### Step 1: Make your notes page
 
-If you have an AI assistant that can use a browser and a terminal (like [Claude Code](https://claude.com/claude-code)), paste the prompt below. It will walk you through every step, wait for you whenever you need to sign in or click something, and check each step before moving on. A chat-only assistant like Claude.ai also works; it will just give you instructions instead of doing the clicks.
+Open a private note on your computer (Notes, Word, Google Docs, anything) and paste this in. You'll fill in the blanks as you go.
+
+```
+BASE_URL=
+SLACK_BOT_TOKEN=
+SLACK_SIGNING_SECRET=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GMAIL_ADDRESS=
+GMAIL_APP_PASSWORD=
+PORT=3000
+```
+
+When this guide says **📝 Save as `SOMETHING`**, paste the value right after the `=` on that line, with no spaces, like `SLACK_SIGNING_SECRET=8f2b1c…`.
+
+---
+
+### Step 2: Put the app online
+
+Railway is a service that keeps the app running on the internet all day.
+
+1. Go to **[railway.com](https://railway.com)** and click **Sign up**. Signing up with the society Gmail account is easiest.
+2. Choose the **Hobby** plan and add your card when asked.
+3. On your Railway dashboard, click **New** (or **+ New Project**), then **Docker Image**. A box appears.
+4. Paste this into the box exactly, then press **Enter**:
+   ```
+   ghcr.io/joshuawangia/philo-scheduler:latest
+   ```
+   A box called **philo-scheduler** appears on the screen. Railway calls this a *service*.
+5. Click the **philo-scheduler** box, open the **Variables** tab, and click **+ New Variable**. Name it `PORT`, set the value to `3000`, and click **Add**.
+6. Still in the box, open the **Settings** tab and scroll to **Networking**. Click **Generate Domain**. If it asks which port, type **3000**.
+   You'll get a web address like `philo-interviews-production.up.railway.app`.
+7. Give the app somewhere permanent to save bookings. **This is important:** without it, all bookings are erased whenever the app restarts.
+   - Right-click the **philo-scheduler** box, or press <kbd>Ctrl</kbd>+<kbd>K</kbd> / <kbd>⌘ Cmd</kbd>+<kbd>K</kbd> and type `volume`.
+   - Choose **Attach volume** (or **Add Volume**), and set the **mount path** to:
+     ```
+     /data
+     ```
+8. Railway asks you to **Deploy** the changes. Click it, and wait about a minute until the box says **Active** or **Online**.
+9. Open your web address in a new browser tab, with `https://` in front.
+
+✅ **You should see** the Philomathean logo and a **Setup checklist** with a list of ❌. That's correct: nothing is set up yet. **Keep this tab open.** You'll come back to it after every step.
+
+📝 The checklist shows your exact web address next to `BASE_URL`. **Save as `BASE_URL`**, in the form `https://…railway.app` with no slash at the end.
+
+---
+
+### Step 3: Let philos connect Google Calendar
+
+This creates the "Sign in with Google" screen philos see when they connect their calendar. It's the longest step, so take it slowly.
+
+1. Go to **[console.cloud.google.com](https://console.cloud.google.com)** and sign in with the society Gmail account. If it asks you to agree to terms, agree.
+2. **Make a project.** Click the project picker at the top left (it may say *Select a project*), then **New project**. Name it `Philo Interviews` and click **Create**. When it's done, make sure **Philo Interviews** is selected in the picker.
+3. **Turn on the Calendar connection.** In the search bar at the top, type `Google Calendar API`, click it in the results, and click **Enable**.
+4. **Set up the sign-in screen.** In the search bar, type `Google Auth Platform` (older screens call it *OAuth consent screen*) and open it. Click **Get started**, then:
+   - **App name:** `Philo Interviews`. **User support email:** pick your email. Click **Next**.
+   - **Audience:** choose **External**. Click **Next**.
+   - **Contact information:** your email. Click **Next**.
+   - Tick the box to agree, then click **Continue** and **Create**.
+5. **Say what the app may access.** In the left menu, click **Data Access**, then **Add or remove scopes**. Scroll to the bottom of the panel, find **Manually add scopes**, and paste these two lines:
+   ```
+   https://www.googleapis.com/auth/calendar.freebusy
+   https://www.googleapis.com/auth/calendar.events
+   ```
+   Click **Add to table**, then **Update**, then **Save** at the bottom of the page.
+6. **Publish it.** In the left menu, click **Audience**. Under **Publishing status**, click **Publish app**, then **Confirm**.
+   ⚠️ **Don't skip this.** Otherwise Google disconnects every philo after 7 days.
+7. **Make the keys.** In the left menu, click **Clients**, then **+ Create client**:
+   - **Application type:** **Web application**. **Name:** `Philo Interviews`.
+   - Under **Authorized redirect URIs**, click **+ Add URI**. Go to your app's setup page tab, find **Google → Authorized redirect URI**, click **Copy**, and paste it here. It ends in `/oauth/google/callback`.
+   - Click **Create**.
+8. A box shows your **Client ID** and **Client secret**. **Copy both now**; the secret may not be shown again. Click **Download JSON** too, as a backup.
+   - 📝 **Save as `GOOGLE_CLIENT_ID`**: the long one ending in `.apps.googleusercontent.com`.
+   - 📝 **Save as `GOOGLE_CLIENT_SECRET`**: it usually starts with `GOCSPX-`.
+
+---
+
+### Step 4: Create the Slack app
+
+1. Go to **[api.slack.com/apps](https://api.slack.com/apps)** and sign in to your Slack workspace if asked.
+2. Click **Create New App**, then **From a manifest**. A *manifest* is a ready-made description of the app, so you don't have to set it up by hand.
+3. Pick your workspace and click **Next**.
+4. Click the **YAML** tab and delete everything in the box.
+5. Go to your app's setup page tab, find **Slack → Create app → From a manifest**, click **Copy**, and paste it into Slack's box. Your web address is already filled in. Click **Next**, then **Create**.
+   (If Slack warns that a URL isn't verified yet, that's normal. Ignore it for now.)
+6. You're now on the app's **Basic Information** page. Scroll to **App Credentials**, click **Show** next to **Signing Secret**, and copy it.
+   📝 **Save as `SLACK_SIGNING_SECRET`.**
+7. In the left menu, click **Install App**, then **Install to *your workspace***, then **Allow**.
+   - If the button says **Request to Install**, click it. Your Slack admin has to approve the request before you can continue.
+8. After installing, you'll see a **Bot User OAuth Token** that starts with `xoxb-`. Click **Copy**.
+   📝 **Save as `SLACK_BOT_TOKEN`.**
+
+---
+
+### Step 5: Set up the email account
+
+The app sends the First Censor's sign-up emails from the society Gmail account. Gmail needs a special **app password** for this. It's separate from the normal password, and it only lets the app send mail.
+
+1. Sign in to the society Gmail account and go to **[myaccount.google.com/security](https://myaccount.google.com/security)**.
+2. Find **2-Step Verification** and turn it **on**, following Google's steps (it will want a phone number). App passwords don't exist until this is on.
+3. Go to **[myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)**. Type `Philo Interviews` as the name and click **Create**.
+4. Google shows 16 letters in a yellow box, like `abcd efgh ijkl mnop`. Copy them; the spaces don't matter.
+   - 📝 **Save as `GMAIL_APP_PASSWORD`.**
+   - 📝 **Save as `GMAIL_ADDRESS`**: the Gmail address itself, e.g. `philo.interviews@gmail.com`.
+
+Emails go to **firstcensor@philomathean.org**. To change that, also add a line `DIGEST_TO=someone@example.com` to your notes.
+
+---
+
+### Step 6: Give the app your keys
+
+Your notes page should now have every line filled in.
+
+1. In Railway, click the **philo-scheduler** box, open the **Variables** tab, and click **Raw Editor**.
+2. Select everything in the editor, delete it, and paste your whole notes page in.
+3. Click **Update Variables**, then **Deploy** when it asks. Wait about a minute until the box says **Active** or **Online**.
+4. Go back to the setup page tab and refresh it.
+
+✅ **You should see** a ✅ next to every item. If something has a ❌, the hint next to it tells you what's wrong. Usually a key was copied incompletely or has a space in it. Fix that line in **Raw Editor**, click **Update Variables**, then **Deploy**, and refresh again.
+
+When everything is ✅, your web address shows the applicant page. You can always get back to the checklist by adding `/setup` to the end of your web address.
+
+---
+
+### Step 7: Turn it on in Slack
+
+1. **Let Slack check the connection.** Go back to **[api.slack.com/apps](https://api.slack.com/apps)** → your app → **Event Subscriptions** (in the left menu). Next to **Request URL**, click **Retry** (or **Change** and then **Save**) until it says **Verified ✓**. Click **Save Changes** at the bottom if it appears.
+2. **Claim the admin role.** The person who will be First Censor opens Slack, goes to any channel, and types:
+   ```
+   /philo claim
+   ```
+   Slack confirms that you're the First Censor. Only the first person to do this gets the role, so do it right away. You can hand it over later with `/philo censor @name`.
+3. **Set the interview dates.** Type `/philo settings`. Pick the first and last interview days, tick **Open for booking**, and click **Save**. The other options are fine as they are: 2-hour interviews between 9am and 11pm, with 2 philos per interview.
+4. **Ask every philo to connect.** Send them [the message in this section](#message-for-philos). Each philo types `/philo connect` and clicks the button.
+5. **Do a test booking.**
+   1. Open your web address, book a time within the next day using your own name and email, and click **Reserve**.
+   2. Within a minute, the philos picked for it should get a Slack message, and **firstcensor@philomathean.org** should get an email starting with **URGENT:**.
+   3. Click **Cancel this interview** on the confirmation page to clean up.
+6. **Share the link with applicants.** Type `/philo link` in Slack to get it. It's your web address.
+
+🎉 **You're done!**
+
+#### Message for philos
+
+> Hi! We're scheduling interviews with a Slack app this year. Please take 2 minutes to connect your Google Calendar so you only get booked when you're free:
+> 1. In Slack, type `/philo connect` and press Enter.
+> 2. Click **Connect Google Calendar** and sign in with the calendar you actually use.
+> 3. If Google says *"Google hasn't verified this app"*, click **Advanced**, then **Go to Philo Interviews**. That's expected; it's our own app.
+>
+> The app can only see when you're busy, never what your events are. You'll get a Slack message and a calendar invite whenever you're assigned an interview.
+
+---
+
+## Stuck? Get help from an AI assistant
+
+Paste the prompt below into an AI assistant like [Claude](https://claude.ai). It walks you through the guide one step at a time and helps you read any error you see. If your assistant can control a browser (for example Claude Code with Claude in Chrome), it can do the clicking for you while you handle sign-ins and payment.
 
 ```text
-You are helping me set up "Philo Interviews", an interview scheduler for the Philomathean
-Society. The code is at https://github.com/joshuawangia/philo-scheduler. Read its README.md
-first. The "Setup guide" section there is the source of truth, so follow it in order
-(Steps 1–6).
+I'm setting up "Philo Interviews", an interview scheduler for the Philomathean Society.
+The setup guide is the README at https://github.com/joshuawangia/philo-scheduler.
+Please read it and walk me through the "Setup guide" section, Steps 1 to 7, in order.
 
-How to work with me:
-- I'm not a programmer. Explain each step in plain language, one step at a time, and wait
-  for me to confirm before moving on.
-- Whenever I need to sign in, pay, approve something, or copy a secret, stop and tell me
-  exactly what to click. Never ask me to paste passwords or keys into this chat unless you
-  are directly entering them into Railway for me.
-- Keep a running checklist of the values we've collected: BASE_URL, SESSION_SECRET,
-  SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET, FIRST_CENSOR_SLACK_ID, GOOGLE_CLIENT_ID,
-  GOOGLE_CLIENT_SECRET, SMTP_URL, EMAIL_FROM. Show only which ones are done, not their values.
-- Check each step before continuing: e.g. BASE_URL/healthz says "ok", Slack's Request URL
-  shows Verified, and a test booking produces the Slack message and the URGENT email.
-- Important gotchas: set the Google OAuth app to "In production" (Testing mode disconnects
-  people after 7 days); the Google redirect URI must be exactly
-  BASE_URL + /oauth/google/callback; replace all three URLs in slack-manifest.yml; the @ in
-  the Gmail address inside SMTP_URL must be written %40; never change SESSION_SECRET later.
-- If something fails, check the README's Troubleshooting section and the Railway
-  deploy logs before guessing.
+About me: I have no technical experience. Please:
+- Give me one small step at a time, in plain language, and wait for me to say "done" (or
+  describe what I see) before giving the next one.
+- Tell me exactly what to click and what I should see after each click. If my screen
+  looks different from the guide, help me find the matching button.
+- Never ask me to paste my keys/passwords into this chat. Just tell me where to put them.
+- After each step, have me check the app's setup page (my web address + /setup) and tell
+  you which items show ✅ or ❌.
+- If something goes wrong, check the guide's "Troubleshooting" section first.
+
+Things that commonly go wrong (please watch for them):
+- Railway needs a volume mounted at /data, and PORT=3000.
+- In Google, the app must be "Published" (Audience → Publish app), or people get
+  disconnected after 7 days.
+- The Google redirect URI and the Slack manifest should be copied from my app's
+  /setup page, not typed by hand.
+- Gmail app passwords only exist after 2-Step Verification is turned on.
 
 My details:
-- Slack workspace: [e.g. philo.slack.com]
-- First Censor's name in Slack: [name]
-- Email account that will send the digests: [e.g. philo.interviews@gmail.com]
-- Digest recipient (if not firstcensor@philomathean.org): [optional]
-- Interview dates: [e.g. Oct 5 – Oct 11]
+- Slack workspace name: [fill in]
+- Society Gmail address that will send emails: [fill in]
+- Interview dates: [fill in, e.g. October 5 to October 11]
 
-Start with Step 1.
+I'm at Step [1] now.
 ```
 
 ---
 
-## Using it
+## Troubleshooting
+
+| What you see | What to do |
+|---|---|
+| The web address says **"Application failed to respond"** or won't load | In Railway, check that the **philo-scheduler** box says **Active**. Check that `PORT=3000` is in **Variables**, and that **Settings → Networking** uses port **3000**. Click **Deploy** again. |
+| The setup page shows a ❌ | Read the hint next to it. Usually a key was cut off, has a space in it, or was pasted into the wrong line. Fix it in Railway → **Variables → Raw Editor**, click **Update Variables**, then **Deploy**. |
+| Bookings or connections disappeared | The volume is missing. Add one with the mount path `/data` ([Step 2.7](#step-2-put-the-app-online)). Philos will need to reconnect once. |
+| `/philo` says **"dispatch_failed"** or nothing happens | Do [Step 7.1](#step-7-turn-it-on-in-slack) (Verified ✓). If you made a new Railway web address, recreate the Slack app from the setup page's manifest. |
+| Slack says **"/philo is not a valid command"** | The Slack app isn't installed yet, or is waiting for admin approval ([Step 4.7](#step-4-create-the-slack-app)). |
+| Google says **"redirect_uri_mismatch"** | The redirect URI in Google doesn't match exactly. Copy it again from the setup page into Google → **Clients** → your client → **Authorized redirect URIs**, then click **Save**. |
+| Google says **"Access blocked"**, or philos are disconnected after a week | The Google app isn't published. Do [Step 3.6](#step-3-let-philos-connect-google-calendar), then have philos run `/philo connect` again. |
+| Philos see **"Google hasn't verified this app"** | That's expected. Click **Advanced → Go to Philo Interviews**. |
+| The applicant page says **"no interview times available"** | Check that booking is open and the dates are set (`/philo settings`), and that at least 2 philos have connected. If the problem persists, everyone may simply be busy then. Check the **Home** tab of the app in Slack to see who's connected. |
+| No emails arrive | Check the setup page for the Gmail rows, and look in the spam folder at firstcensor@philomathean.org. The app password must come from the *same* Gmail account as `GMAIL_ADDRESS`. Emails only send when something changed. |
+| Anything else | In Railway, click the box → **Deployments** → **View logs**, and paste the last ~30 lines into the [AI assistant](#stuck-get-help-from-an-ai-assistant). Logs don't contain your keys. |
+
+---
+
+## Day-to-day use
 
 ### Slack commands
 
 | Command | Who | What it does |
 |---|---|---|
 | `/philo connect` | anyone | Connect your Google Calendar |
-| `/philo disconnect` | anyone | Stop being scheduled. Not allowed while you own an upcoming interview's invite; ask the First Censor to reassign it first. |
-| `/philo list` | anyone | Your upcoming interviews. The First Censor sees all of them. |
-| `/philo link` | anyone | The applicant sign-up link |
-| `/philo settings` | First Censor | Dates, hours, length, philos per interview, location, open or closed |
+| `/philo disconnect` | anyone | Stop being scheduled. Ask the First Censor to reassign your upcoming interviews first. |
+| `/philo list` | anyone | Your upcoming interviews (the First Censor sees all of them) |
+| `/philo link` | anyone | The link to send applicants |
+| `/philo claim` | First Censor | Take the First Censor role, if nobody has it |
+| `/philo settings` | First Censor | Dates, hours, interview length, philos per interview, location, open or closed |
 | `/philo open` · `/philo close` | First Censor | Turn applicant sign-ups on or off |
-| `/philo censor @someone` | First Censor | Hand the First Censor role to the next person |
+| `/philo censor @name` | First Censor | Hand the First Censor role to the next person |
 
-### The Home tab
-
-Click **Philo Interviews** in Slack's sidebar and open **Home**. Every philo sees their calendar connection and their upcoming interviews. The First Censor also sees the settings, who's connected, and every interview, each with **Edit** (new time and/or different philos) and **Cancel** buttons. Edits send updated calendar invites to the philos. Tell the applicant yourself, since they aren't on the invite, though their confirmation link always shows the current time.
+**The Home tab:** click **Philo Interviews** in Slack's left sidebar and open **Home**. Philos see their calendar status and their interviews. The First Censor also sees every interview, each with **Edit** (change the time or the philos) and **Cancel** buttons. Applicants aren't on the calendar invite, so tell them yourself if you move their interview. Their confirmation link always shows the current time.
 
 ### The sign-up emails
 
-- **The daily digest** goes out at `DIGEST_HOUR` (default 8am), only if something changed. It lists new sign-ups, changes, and the next 48 hours, with `philo-signups-YYYY-MM-DD.csv` attached. The attachment opens in Excel or Google Sheets.
-- **An urgent email** goes out right away when a change touches an interview in the next `URGENT_WINDOW_HOURS` (default 24).
-- **Failed sends are retried** every minute. A change is only marked as emailed once the email really goes out.
+- **Every morning at 8am**, if anything changed, the First Censor gets one email. It lists new sign-ups, cancellations and moves, and the next 48 hours, with a spreadsheet of everyone attached.
+- **Right away**, with **URGENT:** in the subject, if a change affects an interview in the next 24 hours.
+
+### Changing options
+
+Interview dates, hours, length, philos per interview, and location are all changed in Slack with `/philo settings`. A few more options can be added in Railway → **Variables**:
+
+| Variable | Default | What it does |
+|---|---|---|
+| `DIGEST_TO` | `firstcensor@philomathean.org` | Who gets the sign-up emails |
+| `DIGEST_HOUR` | `8` | Hour of the morning email (0–23) |
+| `URGENT_WINDOW_HOURS` | `24` | How close to an interview a change must be to send an urgent email |
+| `TIMEZONE` | `America/New_York` | |
 
 ---
 
-## All settings
+## Updating the app
 
-Set these in Railway → **Variables** (or in a `.env` file when running on your own computer; see [`.env.example`](.env.example)).
-
-| Variable | Required | Default | What it is |
-|---|---|---|---|
-| `BASE_URL` | ✅ | | The app's public address, e.g. `https://…up.railway.app` |
-| `SESSION_SECRET` | ✅ | | 32+ random characters; never change it |
-| `SLACK_BOT_TOKEN` | ✅ | | `xoxb-…` from Slack → Install App |
-| `SLACK_SIGNING_SECRET` | ✅ | | Slack → Basic Information |
-| `FIRST_CENSOR_SLACK_ID` | ✅ | | Member ID of the first First Censor (only used the first time) |
-| `GOOGLE_CLIENT_ID` | ✅ | | Google Cloud → Credentials |
-| `GOOGLE_CLIENT_SECRET` | ✅ | | Google Cloud → Credentials |
-| `SMTP_URL` | for email | | e.g. `smtps://name%40gmail.com:apppassword@smtp.gmail.com:465`. If blank, emails are only written to the log. |
-| `EMAIL_FROM` | | `Philo Interviews <no-reply@philomathean.org>` | Sender shown on the digests. For Gmail, use the Gmail address. |
-| `DIGEST_TO` | | `firstcensor@philomathean.org` | Who receives the digests |
-| `DIGEST_HOUR` | | `8` | Hour (0–23) the daily digest is sent |
-| `URGENT_WINDOW_HOURS` | | `24` | Changes this close to an interview are emailed immediately |
-| `TIMEZONE` | | `America/New_York` | |
-| `DB_PATH` | | `data/philo.db` (`/data/philo.db` in Docker) | Where bookings are stored |
-| `PORT` | | `3000` | Railway sets this automatically |
-| `SLACK_APP_TOKEN` | | | Only for local development (Socket Mode) |
-
-Interview dates, hours, length, philos per interview, minimum notice, and location are set **in Slack** with `/philo settings`, not here.
-
----
-
-## Troubleshooting
-
-| Problem | Fix |
-|---|---|
-| `/healthz` doesn't load, or Railway shows a crash | Open Railway → **Deployments → View logs**. `Missing required env var X` means a variable is empty. `SESSION_SECRET must be at least 32 characters` means it's too short. |
-| Slack says "dispatch_failed" or the command does nothing | The URLs in the Slack app don't match `BASE_URL`. Check **Slash Commands**, **Interactivity**, and **Event Subscriptions** at api.slack.com/apps. All three should be `BASE_URL/slack/events`. |
-| Google says **redirect_uri_mismatch** | The redirect URI in Google Cloud must be exactly `BASE_URL/oauth/google/callback`: `https`, no trailing slash. |
-| Google says "Access blocked" | The OAuth app is in Testing and the person isn't a test user. Publish the app (Step 2.3). |
-| Philos get disconnected after a week | The Google OAuth app is still in **Testing**. Publish it, then have philos run `/philo connect` again. |
-| The applicant page says "no interview times available" | Check that booking is open, the dates are set (`/philo settings`), and at least as many philos as "philos per interview" have connected. Also check whether everyone is simply busy then. |
-| No digest emails | Check the Railway logs for `[digest]` or `[mailer]` lines. For Gmail: 2-Step Verification must be on, the app password must have no spaces, and the `@` in the username must be `%40`. With no `SMTP_URL`, emails are only logged. |
-| Bookings disappeared after a redeploy | The volume isn't attached. Add a volume mounted at `/data` (Step 1.5). |
+When a new version is released, open Railway, click the **philo-scheduler** box, open the **Deployments** tab, and click **Redeploy** on the latest deployment (or the **⋮** menu → **Redeploy**). It fetches the newest version. Bookings and connections are kept on the volume.
 
 ---
 
 ## For developers
 
-Requires **Node 22.13+**.
+Requires **Node 22.13+**. Every push to `main` runs the tests and publishes `ghcr.io/joshuawangia/philo-scheduler:latest` ([workflow](.github/workflows/docker.yml)).
 
 ```bash
 git clone https://github.com/joshuawangia/philo-scheduler && cd philo-scheduler
 cp .env.example .env     # fill it in
 npm install
-npm test                 # runs the automated tests
-npm run dev              # starts the server and restarts it when files change
+npm test
+npm run dev              # restarts on file changes
 ```
 
-**Local development without a public URL:** in your Slack app, turn on **Socket Mode**, then create an app-level token with the `connections:write` scope and set `SLACK_APP_TOKEN=xapp-…`. Slack then connects to your laptop directly. Set `BASE_URL=http://localhost:3000` and add `http://localhost:3000/oauth/google/callback` as a redirect URI in Google Cloud.
-
-**Other hosts:** any host that runs Docker or Node and has a persistent disk works, e.g. Render, Fly.io, or a small VM. A `Dockerfile` is included. Data is a single SQLite file at `DB_PATH`.
-
-**Code map**
+- **Without a public URL:** turn on **Socket Mode** in the Slack app, create an app-level token with `connections:write`, and set `SLACK_APP_TOKEN=xapp-…`. Then set `BASE_URL=http://localhost:3000` and add `http://localhost:3000/oauth/google/callback` as a Google redirect URI.
+- **Other settings** (see [`.env.example`](.env.example)):
+  - `SMTP_URL` sends mail through any SMTP server and overrides the Gmail settings.
+  - `SESSION_SECRET` is optional. If unset, a secret is generated and stored next to the database.
+  - `FIRST_CENSOR_SLACK_ID` is optional. Without it, the First Censor uses `/philo claim`.
+  - `DB_PATH` sets where the database is stored.
+- **Other hosts:** anything that runs Docker with a persistent disk mounted at `/data` works (Render, Fly.io, a VM).
 
 | File | What it does |
 |---|---|
-| `src/scheduler.js` | Builds time slots, checks calendars, books, cancels, reschedules |
+| `src/scheduler.js` | Time slots, calendar checks, booking, cancel, reschedule |
 | `src/slack.js` | Slack commands, Home tab, modals, messages to philos |
-| `src/web.js`, `src/views.js`, `public/` | Applicant pages and Google sign-in |
-| `src/digest.js` | Writes the sign-up email and the CSV |
-| `src/digest-runner.js` | Decides when to send (daily and urgent) and retries failures |
-| `src/mailer.js` | Sends email over SMTP |
+| `src/web.js`, `src/views.js`, `public/` | Applicant pages, setup page, Google sign-in |
+| `src/digest.js`, `src/digest-runner.js`, `src/mailer.js` | The sign-up emails: content, timing, sending |
 | `src/google.js` | Google Calendar API |
-| `src/db.js` | SQLite storage |
+| `src/config.js`, `src/db.js` | Settings checks and SQLite storage |
 
 ---
 
 ## Privacy
 
-- Philos grant **free/busy** access only (the app can't see event titles or details), plus permission to create the interview events. Their Google access is encrypted in the database with `SESSION_SECRET`.
+- Philos give **free/busy** access only (the app can't see event names or details), plus permission to create the interview events. Their Google access is stored encrypted.
 - Applicants are never added to the calendar event, and philos' names never appear on applicant pages.
-- Applicant names and emails are stored in the database and sent to the First Censor's email. Delete the database file after interview season if you don't need it.
+- Applicant names and emails are stored in the app and emailed to the First Censor. To erase everything after interview season, delete the volume in Railway.
 
 ## License
 
